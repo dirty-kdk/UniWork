@@ -1,29 +1,85 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 function Profile() {
   const { profile, updateProfile } = useApp();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
 
   useEffect(() => {
-    const savedProfile = localStorage.getItem('userProfile');
-    if (savedProfile) {
-      updateProfile(JSON.parse(savedProfile));
+    // Получаем информацию о вошедшем пользователе
+    const userInfo = localStorage.getItem('user');
+    if (!userInfo) {
+      // Если пользователь не залогинен, перенаправляем на страницу входа
+      navigate('/login');
+      return;
     }
-  }, []);
+
+    // Парсим информацию о пользователе
+    const user = JSON.parse(userInfo);
+    
+    // Пытаемся получить сохраненный профиль пользователя
+    const savedProfile = localStorage.getItem('userProfile');
+    
+    if (savedProfile) {
+      // Если профиль уже существует, загружаем его
+      const parsedProfile = JSON.parse(savedProfile);
+      updateProfile(parsedProfile);
+    } else {
+      // Если профиля нет, создаем новый с email из данных пользователя
+      updateProfile({
+        name: '',
+        email: user.email || '',
+        major: '',
+        year: '',
+        resume: null
+      });
+    }
+    
+    setIsLoading(false);
+  }, [navigate, updateProfile]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    updateProfile(profile);
+    // Сохраняем профиль в localStorage
+    localStorage.setItem('userProfile', JSON.stringify(profile));
     alert('Профиль успешно сохранен!');
   };
+
+  // Функция для выхода из аккаунта
+  const handleLogout = () => {
+    console.log('Logging out...');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userProfile'); // Для полного выхода удаляем и профиль
+    navigate('/login');
+  };
+
+  // Показываем индикатор загрузки, пока не загрузим данные
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg text-gray-600">Загрузка профиля...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8 md:p-10">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8 text-center">
-          Профиль студента
-        </h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Профиль студента
+          </h1>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 text-sm text-white bg-red-500 rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+          >
+            Выйти
+          </button>
+        </div>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -40,13 +96,49 @@ function Profile() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                value={profile.email}
-                onChange={(e) => updateProfile({ ...profile, email: e.target.value })}
-                required
-              />
+              <div className="relative">
+                <input
+                  type="email"
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  value={profile.email}
+                  onChange={(e) => updateProfile({ ...profile, email: e.target.value })}
+                  required
+                  disabled={!isEditingEmail}
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsEditingEmail(!isEditingEmail)}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-gray-100"
+                  title={isEditingEmail ? "Завершить редактирование" : "Редактировать email"}
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5 text-gray-500 hover:text-blue-500" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    {isEditingEmail ? (
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M5 13l4 4L19 7" 
+                      />
+                    ) : (
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" 
+                      />
+                    )}
+                  </svg>
+                </button>
+              </div>
+              {isEditingEmail && (
+                <p className="mt-1 text-xs text-blue-600">Редактирование email включено</p>
+              )}
             </div>
 
             <div>
