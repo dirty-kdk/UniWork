@@ -1,13 +1,20 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 function Profile() {
-  const { profile, updateProfile } = useApp();
+  const { profile, updateProfile, isLoading: isAppLoading } = useApp();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [localProfile, setLocalProfile] = useState({
+    name: '',
+    email: '',
+    major: '',
+    year: '',
+    resume: null
+  });
+  const [fileSelected, setFileSelected] = useState(false);
 
   useEffect(() => {
     // Получаем информацию о вошедшем пользователе
@@ -21,44 +28,66 @@ function Profile() {
     // Парсим информацию о пользователе
     const user = JSON.parse(userInfo);
     
-    // Пытаемся получить сохраненный профиль пользователя
-    const savedProfile = localStorage.getItem('userProfile');
-    
-    if (savedProfile) {
-      // Если профиль уже существует, загружаем его
-      const parsedProfile = JSON.parse(savedProfile);
-      updateProfile(parsedProfile);
-    } else {
-      // Если профиля нет, создаем новый с email из данных пользователя
-      updateProfile({
-        name: '',
-        email: user.email || '',
-        major: '',
-        year: '',
-        resume: null
-      });
-    }
+    // Инициализируем локальный профиль данными из глобального состояния
+    setLocalProfile({
+      name: profile.name || user.name || '',
+      email: profile.email || user.email || '',
+      major: profile.major || '',
+      year: profile.year || '',
+      resume: profile.resume || null
+    });
     
     setIsLoading(false);
-  }, [navigate, updateProfile]);
+  }, [navigate, profile]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setLocalProfile({
+      ...localProfile,
+      [name]: value
+    });
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLocalProfile({
+        ...localProfile,
+        resume: file
+      });
+      setFileSelected(true);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Сохраняем профиль в localStorage
-    localStorage.setItem('userProfile', JSON.stringify(profile));
-    alert('Профиль успешно сохранен!');
+    // Обновляем глобальный профиль
+    updateProfile(localProfile)
+      .then(result => {
+        if (result.success) {
+          alert('Профиль успешно сохранен!');
+          
+          // Также сохраняем локально на случай проблем с API
+          localStorage.setItem('userProfile', JSON.stringify({
+            ...localProfile,
+            resume: localProfile.resume ? localProfile.resume.name : null
+          }));
+        } else {
+          alert(`Ошибка при сохранении профиля: ${result.message}`);
+        }
+      });
   };
 
   // Функция для выхода из аккаунта
   const handleLogout = () => {
     console.log('Logging out...');
     localStorage.removeItem('user');
-    localStorage.removeItem('userProfile'); // Для полного выхода удаляем и профиль
+    localStorage.removeItem('userProfile');
     navigate('/login');
   };
 
   // Показываем индикатор загрузки, пока не загрузим данные
-  if (isLoading) {
+  if (isLoading || isAppLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-lg text-gray-600">Загрузка профиля...</p>
@@ -84,24 +113,28 @@ function Profile() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ФИО</label>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">ФИО</label>
               <input
+                id="name"
+                name="name"
                 type="text"
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                value={profile.name}
-                onChange={(e) => updateProfile({ ...profile, name: e.target.value })}
+                value={localProfile.name}
+                onChange={handleChange}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <div className="relative">
                 <input
+                  id="email"
+                  name="email"
                   type="email"
                   className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  value={profile.email}
-                  onChange={(e) => updateProfile({ ...profile, email: e.target.value })}
+                  value={localProfile.email}
+                  onChange={handleChange}
                   required
                   disabled={!isEditingEmail}
                 />
@@ -142,22 +175,27 @@ function Profile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Специальность</label>
+              <label htmlFor="major" className="block text-sm font-medium text-gray-700 mb-1">Специальность</label>
               <input
+                id="major"
+                name="major"
                 type="text"
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                value={profile.major}
-                onChange={(e) => updateProfile({ ...profile, major: e.target.value })}
+                value={localProfile.major}
+                onChange={handleChange}
                 required
+                placeholder="Например: Информатика и вычислительная техника"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Курс</label>
+              <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-1">Курс</label>
               <select
+                id="year"
+                name="year"
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                value={profile.year}
-                onChange={(e) => updateProfile({ ...profile, year: e.target.value })}
+                value={localProfile.year}
+                onChange={handleChange}
                 required
               >
                 <option value="">Выберите курс</option>
@@ -165,6 +203,11 @@ function Profile() {
                 <option value="2">Второй курс</option>
                 <option value="3">Третий курс</option>
                 <option value="4">Четвертый курс</option>
+                <option value="5">Пятый курс</option>
+                <option value="6">Шестой курс</option>
+                <option value="магистратура 1">Магистратура 1 год</option>
+                <option value="магистратура 2">Магистратура 2 год</option>
+                <option value="аспирантура">Аспирантура</option>
               </select>
             </div>
           </div>
@@ -187,7 +230,7 @@ function Profile() {
                     strokeLinejoin="round"
                   />
                 </svg>
-                <div className="flex text-sm text-gray-600">
+                <div className="flex flex-col sm:flex-row text-sm text-gray-600 items-center justify-center">
                   <label
                     htmlFor="file-upload"
                     className="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
@@ -197,16 +240,17 @@ function Profile() {
                       id="file-upload"
                       name="file-upload"
                       type="file"
+                      accept=".pdf,.doc,.docx"
                       className="sr-only"
-                      onChange={(e) => updateProfile({ ...profile, resume: e.target.files[0] })}
+                      onChange={handleFileChange}
                     />
                   </label>
-                  <p className="pl-1">или перетащите его сюда</p>
+                  <p className="pl-1 mt-2 sm:mt-0">или перетащите его сюда</p>
                 </div>
-                <p className="text-xs text-gray-500">PDF до 10MB</p>
-                {profile.resume && (
+                <p className="text-xs text-gray-500">PDF, DOC, DOCX до 10MB</p>
+                {(fileSelected || localProfile.resume) && (
                   <p className="text-sm text-green-600">
-                    Выбран файл: {profile.resume.name}
+                    Выбран файл: {localProfile.resume?.name || 'резюме загружено'}
                   </p>
                 )}
               </div>

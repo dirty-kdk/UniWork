@@ -1,40 +1,13 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useApp } from '../context/AppContext';
 
 function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState(null);
+  const { user } = useApp();
   
   // Проверяем, находимся ли на странице входа или регистрации
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
-
-  useEffect(() => {
-    const loggedInUser = localStorage.getItem('user');
-    if (loggedInUser) {
-      setUser(JSON.parse(loggedInUser));
-    }
-  }, []);
-
-  // Слушаем изменения localStorage, чтобы обновить состояние user
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const loggedInUser = localStorage.getItem('user');
-      if (loggedInUser) {
-        setUser(JSON.parse(loggedInUser));
-      } else {
-        setUser(null);
-      }
-    };
-
-    // Добавляем слушатель события storage
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Удаляем слушатель при размонтировании компонента
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
 
   return (
     <nav className="bg-white shadow-lg">
@@ -50,7 +23,7 @@ function Navbar() {
               <Link to="/" className="text-gray-600 hover:text-gray-900">Вакансии</Link>
               {user ? (
                 <>
-                  <Link to="/applications" className="text-gray-600 hover:text-gray-900">Мои вакансии</Link>
+                  <Link to="/applications" className="text-gray-600 hover:text-gray-900">Мои заявки</Link>
                   <Link to="/profile" className="text-gray-600 hover:text-gray-900">Профиль</Link>
                 </>
               ) : (

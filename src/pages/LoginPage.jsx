@@ -1,35 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-// import { useAuth } from '../context/AuthContext'; // Placeholder for AuthContext
+import { useApp } from '../context/AppContext';
+import '../styles/auth.css';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  // const { login } = useAuth(); // Placeholder for login function
+  const { login, isLoading } = useApp();
 
-  // Функция для проверки учетных данных
-  const checkCredentials = (email, password) => {
-    // Получаем список зарегистрированных пользователей
-    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+  // Add/remove auth-active class to body
+  useEffect(() => {
+    document.body.classList.add('auth-active');
     
-    // Ищем пользователя с указанным email
-    const user = registeredUsers.find(user => user.email === email);
-    
-    // Если пользователь не найден, возвращаем ошибку
-    if (!user) {
-      return { success: false, message: 'Email не зарегистрирован. Пожалуйста, сначала зарегистрируйтесь.' };
-    }
-    
-    // Если пароль не совпадает, возвращаем ошибку
-    if (user.password !== password) {
-      return { success: false, message: 'Неверный пароль. Пожалуйста, попробуйте снова.' };
-    }
-    
-    // Если все проверки пройдены, возвращаем успех
-    return { success: true, user };
-  };
+    return () => {
+      document.body.classList.remove('auth-active');
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,22 +29,15 @@ function LoginPage() {
       return;
     }
 
-    // Проверяем учетные данные
-    const result = checkCredentials(email, password);
-    
-    if (!result.success) {
-      setError(result.message);
-      return;
-    }
-
     try {
-      // Авторизуем пользователя, сохраняя информацию в localStorage
-      localStorage.setItem('user', JSON.stringify({ 
-        email: result.user.email
-      }));
+      const result = await login(email, password);
       
-      // Перенаправляем на главную страницу
-      navigate('/');
+      if (result.success) {
+        // Перенаправляем на главную страницу
+        navigate('/');
+      } else {
+        setError(result.message || 'Ошибка входа. Проверьте логин и пароль.');
+      }
     } catch (err) {
       // Обработка ошибок входа
       setError('Не удалось войти. Пожалуйста, попробуйте позже.');
@@ -65,11 +46,11 @@ function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+    <div className="auth-page">
+      <div className="auth-container">
         <h2 className="text-2xl font-bold text-center text-gray-900">Вход</h2>
-        {error && <p className="text-sm text-center text-red-600">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {error && <p className="text-sm text-center text-red-600 mt-2">{error}</p>}
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email address
@@ -106,9 +87,10 @@ function LoginPage() {
           <div>
             <button
               type="submit"
-              className="flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={isLoading}
+              className="flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              Войти
+              {isLoading ? 'Загрузка...' : 'Войти'}
             </button>
           </div>
         </form>

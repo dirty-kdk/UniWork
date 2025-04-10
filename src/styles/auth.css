@@ -1,0 +1,22 @@
+/* Auth pages styles */
+.auth-page {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f3f4f6;
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 28rem; /* 448px */
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
+}
+
+body.auth-active {
+  overflow: hidden;
+} 
